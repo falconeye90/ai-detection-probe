@@ -46,10 +46,10 @@ and combined with explicit weights:
 
 | Signal | Weight | Human-leaning | AI-leaning |
 |--------|:------:|---------------|------------|
-| **AI patterns** — severity-weighted discourse markers (`scripts/ai_patterns.py`) | 0.55 | none found | saturates at 3 strong markers |
+| **AI patterns** — severity-weighted markers (87 patterns in 7 categories, `scripts/ai_patterns.py`) | 0.55 | none found | saturates at 3 blockers |
 | **Burstiness** — sentence-length variance (`CV`), needs ≥ 6 sentences | 0.30 | CV ≥ 0.45 | CV < 0.30 |
 | **Human markers** — very short sentences, digits/units, first-person field verbs, sentence-opener variety | 0.15 | 3/3 markers | 0/3 markers |
-| **Lexical TTR** — vocabulary richness | *reported only* | — | — |
+| **Lexical TTR** — vocabulary richness (+ root-TTR/Guiraud for short texts) | *reported only* | — | — |
 
 The final line is an **AI-likeness estimate** with a verdict band:
 
@@ -86,12 +86,21 @@ with the evidence printed above it, e.g.
 ## Tests
 
 ```bash
-python3 -m unittest discover -s tests -v     # 13 behaviour contracts
+python3 -m unittest discover -s tests -v     # 16 behaviour contracts
 ```
 
 `tests/fixtures/` holds a deliberate AI-flavoured / human-draft pair in each
 language; the suite asserts the two **separate by at least 40 points** and land
-in opposite bands. Run it before trusting any threshold change.
+in opposite bands. It also pins the lexicon wiring (the engine must score
+against `scripts/ai_patterns.py`, not a stale in-file copy). Run it before
+trusting any threshold change.
+
+## Thresholds and their provenance
+
+`references/thresholds.md` records, for every threshold, whether it is
+**measured** (and how) or **approximate with no official source** — plus the
+length-independent alternatives to raw TTR for texts under 300 words
+(root-TTR/Guiraud, MTLD). Nothing here is calibrated against Turnitin.
 
 ## Limitations
 

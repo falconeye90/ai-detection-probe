@@ -1,7 +1,7 @@
 ---
 name: ai-detection-probe
 description: "Use when auditing Arabic text for AI-detection risk."
-version: 2.0.0
+version: 2.1.0
 author: عبدالله العجيان (falconeye90)
 license: MIT
 platforms: [linux, macos, windows]
@@ -73,10 +73,42 @@ python3 scripts/turnitin_sim.py                    # عرض تجريبي مدم�
 
 ---
 
+## العتبات الموثّقة
+
+الجدول الكامل **بمصدر كل عتبة** (مقيسة/تقريبية) وببديل TTR للنصوص القصيرة
+(root-TTR/Guiraud · MTLD) في **`references/thresholds.md`**. القاعدة: أي عتبة بلا
+مصدر رسمي تُكتب **«تقريبي»** صراحةً — لا تُزعم دقة غير موجودة.
+
+**بديل TTR للنصوص القصيرة:** إذا كان `W < 300` فاحسب `G = V/√N` (Guiraud 1954)
+واعرضه بجانب TTR، ولا تُصدر حكماً حاسماً على الفئة المعجمية وحدها. الأداة تفعل ذلك
+تلقائياً وتُظهر `root-TTR (Guiraud)` في القسم [4].
+
+---
+
+## قاموس الأنماط (مساهمة معلم)
+
+في `scripts/ai_patterns.py`: **87 نمطاً** (44 عربي · 43 إنجليزي) موزّعة على **7 فئات**:
+
+| الفئة | المعنى |
+|-------|--------|
+| `connectives` | روابط جاهزة (بالإضافة إلى ذلك، furthermore) |
+| `openers` | صيغ استهلال الجمل/الفقرات |
+| `overstating-importance` | تضخيم الأهمية (محوري/جوهري/pivotal) |
+| `vague-attribution` | إسناد غامض (يرى الخبراء/it is noted) |
+| `negative-parallelism` | توازي سلبي (ليس فقط… بل / not only… but also) |
+| `promotion` | لغة ترويج/حماس (استثنائي/groundbreaking) |
+| `punctuation-markers` | علامات ترقيم (شرطات مكرّرة، فواصل منقوطة متجاورة) |
+
+كل نمط بوزن: **قاطع `2.0`** (blocker) أو **مشتبه `1.0`** (suspect) — والترجيح النهائي
+**جمع الأوزان لا عدّ الأنماط** (يتشبّع عند 3 أنماط قاطعة). والقاموس يدعم نوعين:
+`phrase` (مطابقة كلمة/عبارة كاملة) و`regex` (نمط ترقيمي/بنيوي).
+
+---
+
 ## قراءة النتيجة
 
 ```bash
-python3 -m unittest discover -s tests -v     # 13 عقداً سلوكياً
+python3 -m unittest discover -s tests -v     # 16 عقداً سلوكياً
 ```
 في `tests/fixtures/` زوج مقصود (نص مشبع بـAI / مسودة بشرية) بكل لغة، والاختبارات
 تشترط أن **يفصل بينهما ≥ 40 نقطة** ويقعا في نطاقين متعاكسين. شغّله قبل أن تثق
@@ -123,12 +155,15 @@ AI-likeness estimate: 95%  ->  AI-leaning
 ```
 ai-detection-probe/
 ├── SKILL.md                  # هذا الملف
+├── README.md
+├── references/
+│   └── thresholds.md         # جدول العتبات بمصدر كل عتبة (مساهمة معلم)
 ├── scripts/
 │   ├── turnitin_sim.py       # المحرّك: قراءة المدخلات + الإشارات + التقرير
-│   └── ai_patterns.py        # قوائم الأنماط (عربي/إنجليزي) بخطورة لكل نمط
+│   └── ai_patterns.py        # 87 نمطاً (عربي/إنجليزي) في 7 فئات بأوزان (مساهمة معلم)
 └── tests/
     ├── fixtures/             # زوج عيّنات (AI / بشري) بكل لغة
-    └── test_scoring.py       # 13 عقداً سلوكياً
+    └── test_scoring.py       # 16 عقداً سلوكياً
 ```
 
 ## الرخصة

@@ -80,6 +80,28 @@ class TestSeparation(unittest.TestCase):
         self.assertEqual(human['signals']['ai_patterns']['value'], 0.0)
 
 
+class TestLexiconWiring(unittest.TestCase):
+    """The engine must actually consume the shared lexicon, not a stale copy."""
+
+    def test_engine_scores_against_the_lexicon_module(self):
+        for lang in ('ar', 'en'):
+            entries = probe.iter_patterns(lang)
+            self.assertGreater(len(entries), 20,
+                               f"lexicon looks empty for {lang}")
+            self.assertTrue(all('weight' in e and 'text' in e for e in entries))
+
+    def test_a_known_blocker_phrase_moves_the_signal(self):
+        clean = probe.signal_ai_patterns('هذه جملة عادية تماما بلا أنماط.', 'ar')
+        dirty = probe.signal_ai_patterns('وبالإضافة إلى ذلك، تجدر الإشارة إلى ذلك.', 'ar')
+        self.assertEqual(clean['value'], 0.0)
+        self.assertGreater(dirty['value'], 0.0)
+
+    def test_root_ttr_is_reported_for_short_text(self):
+        report = probe.analyse(fixture('human_sample_ar.txt'), 'human')
+        self.assertIn('root_ttr_guiraud', report['lexical'])
+        self.assertGreater(report['lexical']['root_ttr_guiraud'], 0)
+
+
 class TestHonestDegradation(unittest.TestCase):
     def test_short_text_is_flagged_as_unreliable(self):
         report = probe.analyse('جملة واحدة فقط هنا.', 'tiny')

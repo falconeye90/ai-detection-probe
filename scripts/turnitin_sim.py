@@ -39,12 +39,15 @@ import statistics
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from ai_patterns import patterns_for  # noqa: E402
+from ai_patterns import iter_patterns, WEIGHT_BLOCKER  # noqa: E402
 
 WEIGHTS = {"ai_patterns": 0.55, "burstiness": 0.30, "human_markers": 0.15}
 MIN_WORDS_RELIABLE = 200
 MIN_SENTENCES_RELIABLE = 6
 LEAN_AI, LEAN_HUMAN = 60, 40
+# The lexicon scores each marker in ai_patterns.py units (BLOCKER 2.0 /
+# SUSPECT 1.0); three blockers is the saturation point.
+SATURATION = 3 * WEIGHT_BLOCKER
 
 HUMAN_VERBS_AR = ['شغّلنا', 'قست', 'لاحظت', 'وجدت', 'سجلت', 'قابلت', 'زرت',
                   'أجرينا', 'جربت', 'فشل', 'انسحب', 'رفض', 'لم نتمكن']
@@ -114,15 +117,21 @@ def count_phrase(text, phrase, lang):
 
 def signal_ai_patterns(text, lang):
     hits, weighted = [], 0.0
-    for phrase, severity in patterns_for(lang):
-        n = count_phrase(text, phrase, lang)
+    for entry in iter_patterns(lang):
+        if entry.get('kind') == 'regex':
+            n = len(re.findall(entry['text'], text, re.I))
+        else:
+            n = count_phrase(text, entry['text'], lang)
         if n:
-            hits.append({'phrase': phrase, 'count': n, 'severity': severity})
-            weighted += n * severity
-    hits.sort(key=lambda h: (-h['severity'], -h['count']))
-    # Three strong markers (or the equivalent) is the saturation point: past it
-    # the text is AI-flavoured regardless of how many more it carries.
-    return {'value': min(1.0, weighted / 3.0), 'valid': True,
+            hits.append({'phrase': entry['text'], 'count': n,
+                         'weight': entry['weight'],
+                         'severity': entry['weight'] / WEIGHT_BLOCKER,
+                         'category': entry.get('category', '')})
+            weighted += n * entry['weight']
+    hits.sort(key=lambda h: (-h['weight'], -h['count']))
+    # Three blockers (or the equivalent in suspects) is the saturation point:
+    # past it the text is AI-flavoured regardless of how many more it carries.
+    return {'value': min(1.0, weighted / SATURATION), 'valid': True,
             'weighted_hits': round(weighted, 2), 'hits': hits}
 
 
@@ -160,9 +169,14 @@ def signal_human_markers(text, sentences, lang):
 def signal_lexical(words):
     uniq = len(set(w.lower() for w in words))
     total = len(words)
-    return {'ttr': round(uniq / total, 3) if total else 0.0, 'unique_types': uniq,
-            'tokens': total,
-            'note': 'informational only — TTR does not discriminate under ~300 words'}
+    ttr = uniq / total if total else 0.0
+    # Root-TTR (Guiraud, 1954): G = V / sqrt(N) — far less length-dependent than
+    # raw TTR, so it is reported beside it whenever the text is short.
+    root_ttr = uniq / (total ** 0.5) if total else 0.0
+    return {'ttr': round(ttr, 3), 'root_ttr_guiraud': round(root_ttr, 3),
+            'unique_types': uniq, 'tokens': total,
+            'note': 'informational only — TTR does not discriminate under ~300 words; '
+                    'read root-TTR (Guiraud) alongside it, per references/thresholds.md'}
 
 
 def analyse(text, src):
@@ -216,11 +230,13 @@ def render(report):
     hits = s['ai_patterns']['hits']
     if hits:
         for h in hits[:12]:
-            tag = 'strong' if h['severity'] == 1.0 else 'weak'
-            out.append(f"    x '{h['phrase']}': {h['count']}  ({tag})")
+            tag = 'blocker' if h['weight'] >= 2.0 else 'suspect'
+            cat = h['category'].split(' ')[0] if h['category'] else ''
+            out.append(f"    x '{h['phrase']}': {h['count']}  ({tag}{', ' + cat if cat else ''})")
         if len(hits) > 12:
             out.append(f"    ... and {len(hits) - 12} more")
-        out.append(f"    weighted total: {s['ai_patterns']['weighted_hits']} (saturates at 3.0)")
+        out.append(f"    weighted total: {s['ai_patterns']['weighted_hits']} "
+                   f"(saturates at {SATURATION:.0f})")
     else:
         out.append('    no AI-style markers found')
 
@@ -241,7 +257,9 @@ def render(report):
 
     lx = report['lexical']
     out.append('\n[4] LEXICAL — reported, not scored')
-    out.append(f"    unique types: {lx['unique_types']} | TTR: {lx['ttr']} — {lx['note']}")
+    out.append(f"    unique types: {lx['unique_types']} | TTR: {lx['ttr']} | "
+               f"root-TTR (Guiraud): {lx['root_ttr_guiraud']}")
+    out.append(f"    {lx['note']}")
 
     out.append('\n' + '=' * 66)
     out.append(f"AI-likeness estimate: {report['ai_likeness']}%  ->  {report['verdict']}")
