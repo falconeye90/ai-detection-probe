@@ -42,31 +42,35 @@ python3 scripts/turnitin_sim.py                    # embedded demo
 ## Reading the output
 
 Three signals are scored, each mapped to an AI-likeness contribution in `[0, 1]`
-and combined with explicit weights:
+and combined with weights **measured on a labelled corpus** (see
+`calibration/`):
 
 | Signal | Weight | Human-leaning | AI-leaning |
 |--------|:------:|---------------|------------|
-| **AI patterns** — severity-weighted markers (87 patterns in 7 categories, `scripts/ai_patterns.py`) | 0.55 | none found | saturates at 3 blockers |
-| **Burstiness** — sentence-length variance (`CV`), needs ≥ 6 sentences | 0.30 | CV ≥ 0.45 | CV < 0.30 |
+| **Lexical — root-TTR (Guiraud)** inverted; scored only at ≥ 300 words | 0.30 | G high | G low |
+| **Burstiness** — sentence-length variance (`CV`), needs ≥ 6 sentences | 0.25 | CV ≥ 0.45 | CV < 0.30 |
+| **AI patterns** — severity-weighted markers (87 patterns in 7 categories, `scripts/ai_patterns.py`) | 0.30 | none found | saturates at 3 blockers |
 | **Human markers** — very short sentences, digits/units, first-person field verbs, sentence-opener variety | 0.15 | 3/3 markers | 0/3 markers |
-| **Lexical TTR** — vocabulary richness (+ root-TTR/Guiraud for short texts) | *reported only* | — | — |
+| **Raw TTR** | *reported only* | — | — |
 
-The final line is an **AI-likeness estimate** with a verdict band:
+The final line is an **AI-likeness estimate** with a verdict band, both measured:
 
-- `≥ 60%` → **AI-leaning**
-- `40–60%` → **inconclusive — mixed signals**
-- `≤ 40%` → **human-leaning**
+- `≥ 35%` → **AI-leaning** — flags 82.8% of AI documents, 6.5% of human ones
+- `20–35%` → **inconclusive — mixed signals** (the measured overlap zone)
+- `< 20%` → **human-leaning** — 61.3% of human documents, 3.4% of AI ones
 
-**TTR is deliberately not scored.** On texts under ~300 words the type/token
-ratio sits near 1.0 for human and AI writing alike, so it cannot discriminate —
-in v1 an equally-weighted TTR point cancelled out the markers that *were*
-discriminating, and a draft with seven strong AI markers tied with a human
-field-notes draft (2.0/4 each).
+Signals that cannot be computed honestly for the input are **dropped and their
+weight redistributed** — never scored as zero: burstiness below 6 sentences,
+lexical below 300 words (a length-dependent measure). Inputs under 200 words
+raise an explicit warning: the estimate is a hint, not a result.
 
-A signal that cannot be computed honestly for the input (fewer than 6 sentences,
-empty content) is **dropped and its weight redistributed** — never scored as
-zero. Inputs under 200 words raise an explicit warning: the estimate is a hint,
-not a result.
+**TTR is deliberately not scored — root-TTR is.** Raw TTR sits near 1.0 for
+short texts regardless of authorship, and in v1 an equally-weighted TTR point
+cancelled out the markers that *were* discriminating: a draft with seven strong
+AI markers tied with a human field-notes draft (2.0/4 each). The calibration
+then showed the *length-corrected* measure (root-TTR/Guiraud) is the single
+strongest signal we compute (AUC 0.867) — so it is scored, but only where it is
+valid (≥ 300 words).
 
 ## Example
 
@@ -98,9 +102,23 @@ trusting any threshold change.
 ## Thresholds and their provenance
 
 `references/thresholds.md` records, for every threshold, whether it is
-**measured** (and how) or **approximate with no official source** — plus the
-length-independent alternatives to raw TTR for texts under 300 words
-(root-TTR/Guiraud, MTLD). Nothing here is calibrated against Turnitin.
+**measured** (and how) or **approximate with no official source**. The shipped
+weights and bands are measured — this is the calibration in one block:
+
+```
+corpus            : 29 AI documents (Arabic, 4 different models)
+                    31 human documents (Arabic Wikipedia extracts), 300-600 words
+AUC               : 0.965        (v2 weights before lexical: 0.898)
+best threshold    : 25 (Youden J 0.836; 91.7% accuracy on 60 documents)
+per-signal AUC    : root-TTR 0.867 > burstiness 0.845 > human markers 0.765
+                    > AI markers 0.598   <- the pattern list alone is weak on
+                                            real model output, despite being the
+                                            thing everyone assumes carries it
+```
+
+Re-run it yourself with `calibration/` (see `calibration/README.md`). Honest
+limits: one Arabic corpus, one register, n = 60, and **nothing here is
+calibrated against Turnitin** — these are measurements of our own signals.
 
 ## Limitations
 

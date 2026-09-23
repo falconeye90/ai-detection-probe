@@ -57,21 +57,21 @@ class TestSeparation(unittest.TestCase):
         human = probe.analyse(fixture(f'human_sample_{lang}.txt'), 'human')
         return ai, human
 
-    def test_arabic_pair_separates_and_lands_in_opposite_bands(self):
+    def test_arabic_pair_separates_and_flags_the_ai_draft(self):
         ai, human = self._pair('ar')
         self.assertGreaterEqual(ai['ai_likeness'] - human['ai_likeness'], self.MIN_GAP,
                                 f"arabic pair did not separate: {ai['ai_likeness']} vs "
                                 f"{human['ai_likeness']}")
         self.assertEqual(ai['verdict'], 'AI-leaning')
-        self.assertEqual(human['verdict'], 'human-leaning')
+        self.assertNotEqual(human['verdict'], 'AI-leaning')
 
-    def test_english_pair_separates_and_lands_in_opposite_bands(self):
+    def test_english_pair_separates_and_flags_the_ai_draft(self):
         ai, human = self._pair('en')
         self.assertGreaterEqual(ai['ai_likeness'] - human['ai_likeness'], self.MIN_GAP,
                                 f"english pair did not separate: {ai['ai_likeness']} vs "
                                 f"{human['ai_likeness']}")
         self.assertEqual(ai['verdict'], 'AI-leaning')
-        self.assertEqual(human['verdict'], 'human-leaning')
+        self.assertNotEqual(human['verdict'], 'AI-leaning')
 
     def test_ai_fixture_scores_high_because_of_markers_not_burstiness(self):
         """Pins the weighting fix: markers alone must be enough to flag a draft."""
@@ -114,10 +114,16 @@ class TestHonestDegradation(unittest.TestCase):
         self.assertNotIn('burstiness', report['weights_used'])
         self.assertIn('ai_patterns', report['weights_used'])
 
-    def test_lexical_is_reported_but_never_scored(self):
-        report = probe.analyse(fixture('human_sample_ar.txt'), 'human')
-        self.assertIn('ttr', report['lexical'])
-        self.assertNotIn('lexical', report['weights_used'])
+    def test_lexical_is_scored_only_on_long_texts(self):
+        """Length-gated signal: scored at >=300 words, reported below that."""
+        short = probe.analyse(fixture('human_sample_ar.txt'), 'short')
+        self.assertNotIn('lexical', short['weights_used'])
+        self.assertIn('ttr', short['lexical'])
+
+        long_text = fixture('human_sample_ar.txt') * 3   # > 300 words
+        long_report = probe.analyse(long_text, 'long')
+        self.assertGreaterEqual(long_report['words'], probe.LEXICAL_MIN_WORDS)
+        self.assertIn('lexical', long_report['weights_used'])
 
 
 class TestInputHandling(unittest.TestCase):

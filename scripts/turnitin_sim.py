@@ -8,24 +8,28 @@ Turnitin check: Turnitin's own documentation states its model works through
 "many learned patterns working together rather than by a small set of
 transparent, human-readable rules", so no local script reproduces its verdict.
 
-Scoring model (v2)
+Scoring model (v3)
 ------------------
-Three scored signals, each mapped to an AI-likeness contribution in [0, 1] and
-combined with explicit weights. A signal that cannot be computed honestly for
-this input (too few sentences, too little text) is dropped and its weight is
-redistributed — never guessed at:
+Four scored signals, each mapped to an AI-likeness contribution in [0, 1] and
+combined with weights MEASURED on a labelled corpus (calibration/, see
+calibration/README.md). A signal that cannot be computed honestly for this input
+is dropped and its weight is redistributed — never guessed at:
 
-    ai_patterns   0.55   severity-weighted discourse markers (ai_patterns.py)
-    burstiness    0.30   coefficient of variation of sentence length (>=6 sents)
-    human_markers 0.15   edits a draft picks up: very short sentences,
-                         numbers/units, first-person field verbs, opener variety
-    lexical       0.00   type/token richness — REPORTED ONLY: on texts under
-                         ~300 words TTR sits near 1.0 for human and AI writing
-                         alike, so it cannot discriminate and must not score
+    ai_patterns   0.30   severity-weighted markers (ai_patterns.py, 87 patterns)
+                         — AUC 0.598 alone, the weakest on real model output
+    burstiness    0.25   CV of sentence length (>= 6 sentences) — AUC 0.845
+    human_markers 0.15   edits a draft picks up — AUC 0.765
+    lexical       0.30   root-TTR (Guiraud), scored only at >= 300 words
+                         — AUC 0.867, the strongest single signal
 
-The v1 model scored four equally-weighted signals, so a text carrying seven
-strong AI markers and a clean human draft both landed on 2.0/4: the one signal
-that actually separated them was worth a single point.
+Measured on 29 AI / 31 human Arabic documents: AUC 0.965 (v2 weights: 0.898).
+Verdict bands (35 / 20) are the measured operating points, not round numbers
+picked by taste.
+
+History: v1 scored four equally-weighted signals, so a text carrying seven strong
+AI markers and a clean human draft both landed on 2.0/4 — the only signal that
+separated them was worth a single point, and raw TTR (which discriminates nothing
+on short texts) cancelled it out.
 
 Usage:
     python3 turnitin_sim.py document.docx
@@ -41,10 +45,18 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ai_patterns import iter_patterns, WEIGHT_BLOCKER  # noqa: E402
 
-WEIGHTS = {"ai_patterns": 0.55, "burstiness": 0.30, "human_markers": 0.15}
+WEIGHTS = {"ai_patterns": 0.30, "burstiness": 0.25, "human_markers": 0.15,
+           "lexical": 0.30}
 MIN_WORDS_RELIABLE = 200
 MIN_SENTENCES_RELIABLE = 6
-LEAN_AI, LEAN_HUMAN = 60, 40
+# Lexical richness is length-dependent, so it is only scored on texts long
+# enough for the measure to mean something (see references/thresholds.md).
+LEXICAL_MIN_WORDS = 300
+LEXICAL_G_RANGE = (4.0, 16.0)   # root-TTR (Guiraud) -> AI-likeness, clamped
+# Bands measured on calibration/results.json (Arabic corpus, n=29 AI / 32 human):
+# >= 35 -> 83% of AI documents, 9% of human documents
+# <  20 -> 59% of human documents, 3% of AI documents
+LEAN_AI, LEAN_HUMAN = 35, 20
 # The lexicon scores each marker in ai_patterns.py units (BLOCKER 2.0 /
 # SUSPECT 1.0); three blockers is the saturation point.
 SATURATION = 3 * WEIGHT_BLOCKER
@@ -166,17 +178,22 @@ def signal_human_markers(text, sentences, lang):
             'opener_diversity': round(opener_diversity, 2)}
 
 
-def signal_lexical(words):
+def signal_lexical(words, sentences=()):
     uniq = len(set(w.lower() for w in words))
     total = len(words)
     ttr = uniq / total if total else 0.0
     # Root-TTR (Guiraud, 1954): G = V / sqrt(N) — far less length-dependent than
-    # raw TTR, so it is reported beside it whenever the text is short.
+    # raw TTR, so it is what gets scored once the text is long enough.
     root_ttr = uniq / (total ** 0.5) if total else 0.0
+    lo, hi = LEXICAL_G_RANGE
+    valid = total >= LEXICAL_MIN_WORDS
+    value = max(0.0, min(1.0, (hi - root_ttr) / (hi - lo)))
     return {'ttr': round(ttr, 3), 'root_ttr_guiraud': round(root_ttr, 3),
-            'unique_types': uniq, 'tokens': total,
-            'note': 'informational only — TTR does not discriminate under ~300 words; '
-                    'read root-TTR (Guiraud) alongside it, per references/thresholds.md'}
+            'unique_types': uniq, 'tokens': total, 'valid': valid, 'value': value,
+            'reason': None if valid else
+                      f'needs >= {LEXICAL_MIN_WORDS} words (length-dependent measure)',
+            'note': 'scored via root-TTR (Guiraud) once the text is long enough; '
+                    'reported only below that, per references/thresholds.md'}
 
 
 def analyse(text, src):
@@ -185,10 +202,12 @@ def analyse(text, src):
              else re.findall(r'[A-Za-z]+', text))
     sentences = split_sentences(text)
 
+    lexical = signal_lexical(words)
     signals = {
         'ai_patterns': signal_ai_patterns(text, lang),
         'burstiness': signal_burstiness(sentences),
         'human_markers': signal_human_markers(text, sentences, lang),
+        'lexical': lexical,
     }
 
     num = den = 0.0
@@ -211,10 +230,12 @@ def analyse(text, src):
                         'estimate is unstable; treat it as a hint, not a result')
     if not signals['burstiness']['valid']:
         warnings.append('burstiness dropped (too few sentences); its weight was redistributed')
+    if not lexical['valid']:
+        warnings.append(f"lexical dropped ({lexical['reason']}); its weight was redistributed")
 
     return {'source': src, 'language': lang, 'words': len(words),
             'sentences': len(sentences), 'ai_likeness': ai_pct, 'verdict': verdict,
-            'signals': signals, 'lexical': signal_lexical(words),
+            'signals': signals, 'lexical': lexical,
             'weights_used': {k: WEIGHTS[k] for k, s in signals.items() if s['valid']},
             'warnings': warnings}
 
@@ -256,9 +277,14 @@ def render(report):
                f"opener diversity: {h['opener_diversity']} | markers: {h['markers']}/3")
 
     lx = report['lexical']
-    out.append('\n[4] LEXICAL — reported, not scored')
+    scored = 'scored' if lx['valid'] else 'reported only (too short)'
+    out.append(f"\n[4] LEXICAL — root-TTR (Guiraud), {scored} "
+               f"(weight {WEIGHTS['lexical']})")
     out.append(f"    unique types: {lx['unique_types']} | TTR: {lx['ttr']} | "
-               f"root-TTR (Guiraud): {lx['root_ttr_guiraud']}")
+               f"root-TTR: {lx['root_ttr_guiraud']} -> contribution "
+               f"{lx['value']:.2f}" if lx['valid'] else
+               f"    unique types: {lx['unique_types']} | TTR: {lx['ttr']} | "
+               f"root-TTR: {lx['root_ttr_guiraud']}")
     out.append(f"    {lx['note']}")
 
     out.append('\n' + '=' * 66)
