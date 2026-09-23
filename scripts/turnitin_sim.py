@@ -1,48 +1,86 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """ai-detection-probe — bilingual (Arabic / English) AI-likeness probe.
-Estimates whether text reads as AI-generated using three signals in the
-spirit of Turnitin: burstiness / perplexity-style patterns / lexical richness.
-A statistical approximation for self-review — NOT a real Turnitin check.
 
-Usage: python3 turnitin_sim.py /path/to/document.docx
-(no argument -> runs an embedded AI-flavored demo, English by default)
+Estimates how AI-flavoured a text reads from signals that are cheap to compute
+and explainable line by line. It is a self-review aid, NOT a detector and NOT a
+Turnitin check: Turnitin's own documentation states its model works through
+"many learned patterns working together rather than by a small set of
+transparent, human-readable rules", so no local script reproduces its verdict.
+
+Scoring model (v2)
+------------------
+Three scored signals, each mapped to an AI-likeness contribution in [0, 1] and
+combined with explicit weights. A signal that cannot be computed honestly for
+this input (too few sentences, too little text) is dropped and its weight is
+redistributed — never guessed at:
+
+    ai_patterns   0.55   severity-weighted discourse markers (ai_patterns.py)
+    burstiness    0.30   coefficient of variation of sentence length (>=6 sents)
+    human_markers 0.15   edits a draft picks up: very short sentences,
+                         numbers/units, first-person field verbs, opener variety
+    lexical       0.00   type/token richness — REPORTED ONLY: on texts under
+                         ~300 words TTR sits near 1.0 for human and AI writing
+                         alike, so it cannot discriminate and must not score
+
+The v1 model scored four equally-weighted signals, so a text carrying seven
+strong AI markers and a clean human draft both landed on 2.0/4: the one signal
+that actually separated them was worth a single point.
+
+Usage:
+    python3 turnitin_sim.py document.docx
+    python3 turnitin_sim.py notes.txt --json
+    python3 turnitin_sim.py                 # embedded demo
 """
-import re, sys, os, statistics
-from collections import Counter
+import json
+import os
+import re
+import statistics
+import sys
 
-try:
-    from docx import Document
-except ImportError:
-    sys.exit("Install python-docx first: pip install python-docx")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from ai_patterns import patterns_for  # noqa: E402
+
+WEIGHTS = {"ai_patterns": 0.55, "burstiness": 0.30, "human_markers": 0.15}
+MIN_WORDS_RELIABLE = 200
+MIN_SENTENCES_RELIABLE = 6
+LEAN_AI, LEAN_HUMAN = 60, 40
+
+HUMAN_VERBS_AR = ['شغّلنا', 'قست', 'لاحظت', 'وجدت', 'سجلت', 'قابلت', 'زرت',
+                  'أجرينا', 'جربت', 'فشل', 'انسحب', 'رفض', 'لم نتمكن']
+HUMAN_VERBS_EN = ['i measured', 'i found', 'i ran', 'we ran', 'i noticed',
+                  'we noticed', 'i interviewed', 'we recorded', 'failed',
+                  'dropped out', 'refused', 'did not work']
 
 
-def _is_arabic_heavy(text):
+def detect_lang(text):
     ar = len(re.findall(r'[\u0600-\u06FF]', text))
     la = len(re.findall(r'[A-Za-z]', text))
-    return ar >= la and ar > 0
+    return 'ar' if (ar > 0 and ar >= la) else 'en'
 
 
-def _arabic_word_count(text, phrase):
-    # Full Arabic word only — never a substring of a proper name
-    # (e.g. "فريد" must not match "فريدريك").
-    if ' ' in phrase.strip():
-        return text.count(phrase)
-    return len(re.findall(r'(?<![\u0600-\u06FF])' + re.escape(phrase) + r'(?![\\u0600-\\u06FF])', text))
-
-
-AR_VOCAB = ['بالإضافة إلى ذلك', 'علاوة على ذلك', 'جدير بالذكر', 'من ناحية أخرى',
-            'من المهم', 'من الجدير', 'في هذا السياق', 'على المستوى', 'يسلط الضوء',
-            'يعتبر', 'يمثل', 'يتميز', 'فريد', 'استثنائي', 'نابض', 'آفاق واعدة',
-            'المستقبل مشرق', 'خطوة في الاتجاه', 'ليس فقط', 'لا يقتصر', 'شمل ذلك',
-            'تجدر الإشارة', 'من المميز', 'يشير المراقبون', 'يرى الخبراء']
-
-EN_VOCAB = ['additionally', 'furthermore', 'moreover', 'in conclusion',
-            'it is important to note', 'it is worth noting', 'in order to',
-            'due to the fact that', 'delve', 'landscape', 'testament', 'pivotal',
-            'groundbreaking', 'underscores', 'renowned', 'boasts', 'vibrant',
-            'intricate', 'fostering', 'game-changer', 'deep dive', 'not only',
-            'but also', 'at the end of the day', 'when it comes to', 'dive into']
+def read_text(path):
+    """Extract plain text. Raises ValueError with an actionable message."""
+    if not os.path.exists(path):
+        raise ValueError(f"File not found: {path}")
+    ext = os.path.splitext(path)[1].lower()
+    if ext in ('.txt', '.md', '.markdown', ''):
+        with open(path, encoding='utf-8', errors='replace') as fh:
+            return fh.read()
+    if ext == '.docx':
+        try:
+            from docx import Document
+        except ImportError:
+            raise ValueError("Reading .docx needs python-docx: pip install python-docx")
+        return '\n'.join(p.text.strip() for p in Document(path).paragraphs if p.text.strip())
+    if ext == '.pdf':
+        try:
+            from pypdf import PdfReader
+        except ImportError:
+            raise ValueError("Reading .pdf needs pypdf: pip install pypdf "
+                             "(or submit .txt/.docx instead)")
+        return '\n'.join((page.extract_text() or '') for page in PdfReader(path).pages)
+    raise ValueError(f"Unsupported file type '{ext}' — supported: .txt, .md, .docx, .pdf")
 
 
 def demo_text(lang='en'):
@@ -61,83 +99,181 @@ def demo_text(lang='en'):
             "a pivotal step in the right direction towards a brighter future.")
 
 
-def analyse(text, src):
-    arabic = _is_arabic_heavy(text)
-    if arabic:
-        words = re.findall(r'[\u0600-\u06FF]+', text)
-        vocab, counter = AR_VOCAB, lambda ph: _arabic_word_count(text, ph)
-    else:
-        words = re.findall(r"[A-Za-z]+", text)
-        vocab, counter = EN_VOCAB, lambda ph: len(re.findall(r'(?<![A-Za-z])' + re.escape(ph) + r'(?![A-Za-z])', text, re.I))
-    W = len(words)
+def split_sentences(text):
+    return [s.strip() for s in re.split(r'(?<=[.!?؟;؛…])|\n', text) if len(s.strip()) > 3]
 
-    sents = [s.strip() for s in re.split(r'(?<=[.!?؟؟;؛…])|\n', text) if len(s.strip()) > 3]
-    lens = [len(s.split()) for s in sents]
 
-    print("=" * 66)
-    print(f"Probe: {src}   Language: {'Arabic' if arabic else 'English'}")
-    print(f"sentences: {len(sents)} | words: {W}")
-    print("=" * 66)
+def count_phrase(text, phrase, lang):
+    """Whole-word/phrase match; Arabic boundaries are the Arabic block itself."""
+    if lang == 'ar':
+        pat = r'(?<![\u0600-\u06FF])' + re.escape(phrase) + r'(?![\u0600-\u06FF])'
+        return len(re.findall(pat, text))
+    pat = r'(?<![A-Za-z])' + re.escape(phrase) + r'(?![A-Za-z])'
+    return len(re.findall(pat, text, re.I))
 
-    mean = statistics.mean(lens); sd = statistics.stdev(lens); cv = sd / mean
-    print("\n[1] BURSTINESS — sentence-length variance")
-    print(f"    mean len: {mean:.1f} | std: {sd:.1f} | CV: {cv:.3f}", end=' ')
-    if cv >= 0.45: print("→ very varied (human) 🟢")
-    elif cv >= 0.30: print("→ natural 🟡")
-    else: print("→ too uniform (AI-like) 🔴")
 
-    cnt, hits = 0, []
-    for ph in vocab:
-        c = counter(ph)
-        if c:
-            hits.append((ph, c)); cnt += c
-    print("\n[2] PERPLEXITY proxy — common AI-style patterns")
-    if hits:
-        for ph, c in hits:
-            print(f"    ✗ '{ph}': {c}")
-        print(f"    total signals: {cnt}")
-    else:
-        print("    no AI-style patterns found  🟢")
+def signal_ai_patterns(text, lang):
+    hits, weighted = [], 0.0
+    for phrase, severity in patterns_for(lang):
+        n = count_phrase(text, phrase, lang)
+        if n:
+            hits.append({'phrase': phrase, 'count': n, 'severity': severity})
+            weighted += n * severity
+    hits.sort(key=lambda h: (-h['severity'], -h['count']))
+    # Three strong markers (or the equivalent) is the saturation point: past it
+    # the text is AI-flavoured regardless of how many more it carries.
+    return {'value': min(1.0, weighted / 3.0), 'valid': True,
+            'weighted_hits': round(weighted, 2), 'hits': hits}
 
-    very_short = sum(1 for l in lens if l <= 2)
-    print(f"    very short sentences (<=2 words): {very_short} ({100 * very_short / max(1, len(lens)):.0f}%)  " +
-          ("(human-editing marker 🟢)" if very_short >= 3 else ""))
 
+def signal_burstiness(sentences):
+    if len(sentences) < MIN_SENTENCES_RELIABLE:
+        return {'value': 0.0, 'valid': False, 'cv': None,
+                'reason': f'needs >= {MIN_SENTENCES_RELIABLE} sentences'}
+    lens = [len(s.split()) for s in sentences]
+    mean = statistics.mean(lens)
+    if mean == 0:
+        return {'value': 0.0, 'valid': False, 'cv': None, 'reason': 'empty sentences'}
+    cv = statistics.stdev(lens) / mean
+    value = 0.0 if cv >= 0.60 else 0.15 if cv >= 0.45 else 0.50 if cv >= 0.30 else 1.0
+    return {'value': value, 'valid': True, 'cv': round(cv, 3),
+            'mean_len': round(mean, 1), 'sentences': len(lens)}
+
+
+def signal_human_markers(text, sentences, lang):
+    very_short = sum(1 for s in sentences if len(s.split()) <= 3)
+    digits = len(re.findall(r'\d', text))
+    verbs = HUMAN_VERBS_AR if lang == 'ar' else HUMAN_VERBS_EN
+    field_verbs = sum(1 for v in verbs if count_phrase(text.lower(), v, lang))
+    openers = [s.split()[0] for s in sentences if s.split()]
+    opener_diversity = len(set(openers)) / len(openers) if openers else 0.0
+
+    markers = (1 if very_short >= 1 else 0)
+    markers += 1 if (digits >= 2 or field_verbs >= 1) else 0
+    markers += 1 if opener_diversity >= 0.8 else 0
+    return {'value': max(0.0, 1.0 - min(1.0, markers / 3.0)), 'valid': True,
+            'markers': markers, 'very_short_sentences': very_short,
+            'digits': digits, 'field_verbs': field_verbs,
+            'opener_diversity': round(opener_diversity, 2)}
+
+
+def signal_lexical(words):
     uniq = len(set(w.lower() for w in words))
-    ttr = uniq / W if W else 0
-    print("\n[3] LEXICAL — vocabulary richness (TTR)")
-    print(f"    unique types: {uniq} | TTR: {ttr:.3f}", end=' ')
-    if ttr >= 0.35: print("→ rich/varied 🟢")
-    elif ttr >= 0.25: print("→ moderate 🟡")
-    else: print("→ repetitive (AI-like) 🔴")
+    total = len(words)
+    return {'ttr': round(uniq / total, 3) if total else 0.0, 'unique_types': uniq,
+            'tokens': total,
+            'note': 'informational only — TTR does not discriminate under ~300 words'}
 
-    wc = Counter(w.lower() for w in words)
-    print("    top words:", ", ".join(f"{w}({n})" for w, n in wc.most_common(8)))
-    initials = Counter(s.split()[0].lower() for s in sents if s.split())
-    print("    top sentence openers:", ", ".join(f"«{w}»×{n}" for w, n in initials.most_common(6)))
 
-    score = 0
-    score += 1 if cv >= 0.45 else (0.5 if cv >= 0.30 else 0)
-    score += 0 if cnt > 0 else 1
-    score += 1 if ttr >= 0.35 else (0.5 if ttr >= 0.25 else 0)
-    score += 1 if very_short >= 3 else 0
-    pct = score / 4 * 100
-    print("\n" + "=" * 66)
-    print(f"Estimated chance of being flagged as AI: {pct:.0f}%  (human signals {score:.1f}/4)")
-    print("=" * 66)
-    print("\nNote: statistical approximation using the same three signals as Turnitin —")
-    print("NOT Turnitin's real check. Your institution has the final word.")
+def analyse(text, src):
+    lang = detect_lang(text)
+    words = (re.findall(r'[\u0600-\u06FF]+', text) if lang == 'ar'
+             else re.findall(r'[A-Za-z]+', text))
+    sentences = split_sentences(text)
+
+    signals = {
+        'ai_patterns': signal_ai_patterns(text, lang),
+        'burstiness': signal_burstiness(sentences),
+        'human_markers': signal_human_markers(text, sentences, lang),
+    }
+
+    num = den = 0.0
+    for name, sig in signals.items():
+        if sig['valid']:
+            num += WEIGHTS[name] * sig['value']
+            den += WEIGHTS[name]
+    ai_pct = round(100 * num / den) if den else 0
+
+    if ai_pct >= LEAN_AI:
+        verdict = 'AI-leaning'
+    elif ai_pct > LEAN_HUMAN:
+        verdict = 'inconclusive — mixed signals'
+    else:
+        verdict = 'human-leaning'
+
+    warnings = []
+    if len(words) < MIN_WORDS_RELIABLE:
+        warnings.append(f'only {len(words)} words — under {MIN_WORDS_RELIABLE} the '
+                        'estimate is unstable; treat it as a hint, not a result')
+    if not signals['burstiness']['valid']:
+        warnings.append('burstiness dropped (too few sentences); its weight was redistributed')
+
+    return {'source': src, 'language': lang, 'words': len(words),
+            'sentences': len(sentences), 'ai_likeness': ai_pct, 'verdict': verdict,
+            'signals': signals, 'lexical': signal_lexical(words),
+            'weights_used': {k: WEIGHTS[k] for k, s in signals.items() if s['valid']},
+            'warnings': warnings}
+
+
+def render(report):
+    s = report['signals']
+    out = ['=' * 66,
+           f"Probe: {report['source']}   "
+           f"Language: {'Arabic' if report['language'] == 'ar' else 'English'}",
+           f"sentences: {report['sentences']} | words: {report['words']}",
+           '=' * 66]
+    out.append(f"\n[1] AI PATTERNS — severity-weighted markers (weight {WEIGHTS['ai_patterns']})")
+    hits = s['ai_patterns']['hits']
+    if hits:
+        for h in hits[:12]:
+            tag = 'strong' if h['severity'] == 1.0 else 'weak'
+            out.append(f"    x '{h['phrase']}': {h['count']}  ({tag})")
+        if len(hits) > 12:
+            out.append(f"    ... and {len(hits) - 12} more")
+        out.append(f"    weighted total: {s['ai_patterns']['weighted_hits']} (saturates at 3.0)")
+    else:
+        out.append('    no AI-style markers found')
+
+    b = s['burstiness']
+    out.append(f"\n[2] BURSTINESS — sentence-length variance (weight {WEIGHTS['burstiness']})")
+    if b['valid']:
+        label = ('varied (human-like)' if b['cv'] >= 0.45 else
+                 'natural' if b['cv'] >= 0.30 else 'too uniform (AI-like)')
+        out.append(f"    mean len: {b['mean_len']} | CV: {b['cv']}  ->  {label}")
+    else:
+        out.append(f"    not computed: {b['reason']}")
+
+    h = s['human_markers']
+    out.append(f"\n[3] HUMAN MARKERS — edits a draft picks up (weight {WEIGHTS['human_markers']})")
+    out.append(f"    very short sentences: {h['very_short_sentences']} | "
+               f"digits: {h['digits']} | field verbs: {h['field_verbs']} | "
+               f"opener diversity: {h['opener_diversity']} | markers: {h['markers']}/3")
+
+    lx = report['lexical']
+    out.append('\n[4] LEXICAL — reported, not scored')
+    out.append(f"    unique types: {lx['unique_types']} | TTR: {lx['ttr']} — {lx['note']}")
+
+    out.append('\n' + '=' * 66)
+    out.append(f"AI-likeness estimate: {report['ai_likeness']}%  ->  {report['verdict']}")
+    out.append('=' * 66)
+    for w in report['warnings']:
+        out.append(f"! {w}")
+    out.append("\nNot a detector: a local, explainable self-review. "
+               "Your institution's tooling has the final word.")
+    return '\n'.join(out)
+
+
+def main(argv):
+    args = [a for a in argv[1:] if not a.startswith('--')]
+    path = args[0] if args else None
+    if path:
+        try:
+            text = read_text(path)
+        except ValueError as exc:
+            print(f'error: {exc}', file=sys.stderr)
+            return 2
+        src = path
+    else:
+        text = demo_text('en')
+        src = 'embedded demo (English) — pass a file path to analyse a real document'
+    if not text.strip():
+        print('error: no readable text found in the input', file=sys.stderr)
+        return 2
+    report = analyse(text, src)
+    print(json.dumps(report, ensure_ascii=False, indent=2) if '--json' in argv
+          else render(report))
+    return 0
 
 
 if __name__ == '__main__':
-    path = sys.argv[1] if len(sys.argv) > 1 else None
-    if path:
-        if not os.path.exists(path):
-            sys.exit(f"File not found: {path}")
-        doc = Document(path)
-        paras = [p.text.strip() for p in doc.paragraphs if len(p.text.strip()) > 1]
-        src = path
-    else:
-        paras = [demo_text('en')]
-        src = "embedded demo (English) — pass a file path to analyse a real doc"
-    analyse('\n'.join(paras), src)
+    sys.exit(main(sys.argv))
