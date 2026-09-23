@@ -1,68 +1,73 @@
 # ai-detection-probe
 
-**فاحص نصوص عربي لتقدير مدى احتمال أن يُعلَّم النص ككتابة مولَّدة بالذكاء الاصطناعي**
-— بنفس الإشارات الإحصائية الثلاث (تباين الجمل / الغرابة / غنى المفردات) التي يعتمدها
-Turnitin، للدراسة الذاتية والتحسين والتحقق من النبرة البشرية.
+**A bilingual (Arabic 🇸🇦 / English 🇬🇧) AI-likeness probe** that estimates how
+likely a text would be flagged as AI-generated, using the three statistical
+signals in the spirit of Turnitin — *burstiness, perplexity-style patterns, and
+lexical richness*. For self-review, improvement, and transparency about human
+tone — **not** a substitute for your institution's official integrity check.
 
-> ⚠️ هذه الأداة تعمل على نصك محلياً، لا ترفع أي شيء، ولا تحل محل فحص النزاهة
-> الرسمي في مؤسستك الأكاديمية. استخدمها للتحسين والشفافية، لا للتجاوز.
+> ⚠️ This tool runs entirely on your machine. It uploads nothing, needs no
+> account, and never stands in for the official Turnitin/institutional report.
+> Use it to improve and stay transparent — not to circumvent academic integrity.
 
 ---
 
-## المميزات
+## Features
 
-- 🇸🇦 موجهة للعربية الفصحى (نصوص أكاديمية نثرية)
-- 📊 تقرير كمي بثلاثة مؤشرات مطابقة لفلسفة Turnitin
-- 🔒 محلية 100% — لا إرسال للخوادم، بلا حساب، بلا رسوم
-- 🧰 سكربت واحد مستقل (`python-docx` فقط كاعتماد)
+- 🇸🇦🇬🇧 Arabic (fusha) and English academic prose — **language auto-detected**
+- 📊 Quantitative report across three signals mirroring Turnitin's approach
+- 🔒 100% local — no uploads, no account, no fees, single dependency
+- 🧰 One self-contained script (only `python-docx` as a dependency)
 
-## التركيب
+## Install
 
 ```bash
 pip install python-docx
 ```
 
-## الاستخدام
+## Usage
 
 ```bash
-python3 scripts/turnitin_sim.py /المسار/إلى/مستند.docx
-```
+# Arabic OR English .docx (auto-detected)
+python3 scripts/turnitin_sim.py /path/to/document.docx
 
-بدون وسيطة: يعمل على **عيّنة تجريبية** مدمجة (نص ذو بصمة AI متعمدة) لترى الناتج فوراً:
-
-```bash
+# No argument -> runs an embedded AI-flavored demo so you see output at once
 python3 scripts/turnitin_sim.py
 ```
 
-## قراءة الناتج
+## Reading the output
 
-| المؤشر | البشري | نمط AI |
-|--------|:------:|:------:|
-| Burstiness (تباين أطوال الجمل) | CV ≥ 0.45 🟢 | CV < 0.30 🔴 |
-| Perplexity-proxy (أنماط AI) | صفر إشارات 🟢 | أي إشارة 🔴 |
-| Lexical TTR (غنى المفردات) | ≥ 0.35 🟢 | < 0.25 🔴 |
+| Signal | Human-like | AI-like |
+|--------|:----------:|:-------:|
+| **Burstiness** (sentence-length variance) | CV ≥ 0.45 🟢 | CV < 0.30 🔴 |
+| **Perplexity proxy** (AI-style patterns) | zero hits 🟢 | any hit 🔴 |
+| **Lexical TTR** (vocabulary richness) | ≥ 0.35 🟢 | < 0.25 🔴 |
 
-النتيجة النهائية: **N/4 مؤشرات بشرية**. الهدف ≥ 3/4 قبل الإرسال.
+Final result: **N/4 human signals**. Aim for ≥ 3/4 before submitting.
 
-## مثال (مستند حقيقي بعد التنظيف)
+## Example (a cleaned real document)
 
 ```
-BURSTINESS : CV = 0.571 → بشري 🟢
-PERPLEXITY : 0 إشارات AI → نظيف 🟢
-LEXICAL    : TTR = 0.423 → غني 🟢
-التقدير    : 4/4 مؤشرات بشرية (100%)
+BURSTINESS : CV = 0.571 → human 🟢
+PERPLEXITY : 0 AI patterns → clean 🟢
+LEXICAL    : TTR = 0.423 → rich 🟢
+Overall    : 4/4 human signals (100%)
 ```
 
-## القيود
+## Limitations
 
-- العربية النثرية الأكاديمية بدرجة ثقة معقولة؛ العناوين والحواشي لا تُحتسب.
-- تقريب إحصائي — Turnitin يستخدم نماذج أعمق وتدريباً ضخماً.
-- النص المحرَّر بأسلوب بشري أصعب كشفاً (وهذا ميزة للكتابة المشروعة).
+- Arabic/English academic prose at reasonable confidence; headings, citations, and
+  references are excluded from scoring.
+- A statistical approximation — Turnitin uses deeper transformer models and
+  massive training.
+- Heavily human-edited text is harder to detect (an advantage for legitimate
+  writing, which is the honest intent of this tool).
 
-## الاستخدام كدرس للمهارات (Hermes)
+## Hermes skill format
 
-يُستخدم من داخل وكيل Hermes عند الحاجة لفحص عربي. يوثَّق بهيكل `SKILL.md` القياسي.
+Includes the standard `SKILL.md` (bilingual, documented) for use as a Hermes
+Agent skill loaded on demand.
 
-## الرخصة
+## License
 
-MIT © عبدالله العجيان (falconeye90) — استخدم بحرية، ونسب عند الاقتباس.
+MIT © عبدالله العجيان / Abdallah Aljohan (falconeye90) — use freely, attribute on reuse.

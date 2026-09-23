@@ -15,31 +15,31 @@ metadata:
 ---
 # ai-detection-probe — فاحص نصوص لاكتشاف AI
 
-أداة كمية تُقدّر **مدى احتمال أن يُعلَّم النص العربي ككتابة مولَّدة بالذكاء الاصطناعي**،
-بنفس الإشارات الإحصائية الثلاث التي يعتمدها نظام Turnitin — لكن **للدراسة الذاتية،
-ليست بديلاً عن فحص الجامعة الرسمي**.
+**Bilingual — Arabic 🇸🇦 & English 🇬🇧.** An open, quantitative probe that estimates
+how likely a text would be flagged as AI-generated, using the three statistical
+signals in the spirit of Turnitin (burstiness · perplexity-style patterns · lexical
+richness). Arabic or English is auto-detected.
 
-> ⚠️ أخلاقيات: هذه الأداة للتحسين والشفافية. لا تستخدمها لتجاوز فحص النزاهة
-> الأكاديمية — فالإثبات النهائي يبقى لنظام الجامعة، والكتابة بمساعدة الذكاء
-> الاصطناعي تفرض التصريح وفق سياسات مؤسستك.
+> ⚠️ أكاديمياً/أخلاقياً: هذه الأداة للدراسة الذاتية والتحسين والشفافية، وليست بديلاً
+> عن فحص النزاهة الرسمي. الإثبات النهائي يبقى لنظام مؤسستك، والكتابة بمساعدة
+> الذكاء الاصطناعي تتطلب التصريح وفق سياسات جامعتك.
 
 ---
 
-## التثبيت
+## التثبيت / Install
 
 ```bash
 pip install python-docx
 ```
 
-## الاستخدام
+## الاستخدام / Usage
 
 ```bash
-python3 scripts/turnitin_sim.py /المسار/إلى/مستند.docx
-# بدون وسيطة -> يفحص مستنداً افتراضياً مدمجاً كمثال
+# Arabic or English .docx (auto-detected)
+python3 scripts/turnitin_sim.py /path/to/document.docx
+# no argument -> runs an embedded AI-flavored demo (English)
+python3 scripts/turnitin_sim.py
 ```
-
-يعمل على ملفات `.docx` (نص عربي أو ثنائي اللغة). يقيس ثلاثة مؤشرات ويطبع تقريراً
-مقروءاً مع مستويات: 🟢 بشري / 🟡 متوسط / 🔴 نمط AI.
 
 ---
 
