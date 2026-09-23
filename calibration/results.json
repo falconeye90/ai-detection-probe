@@ -1,0 +1,569 @@
+{
+  "n_ai": 29,
+  "n_human": 31,
+  "ai_score_mean": 44.1,
+  "human_score_mean": 16.4,
+  "auc": 0.965,
+  "best_threshold": 25,
+  "youden_j": 0.836,
+  "confusion_at_best_threshold": {
+    "tp": 28,
+    "fp": 4,
+    "tn": 27,
+    "fn": 1
+  },
+  "shipped_bands": {
+    "ai_leaning_at": 35,
+    "human_leaning_below": 20,
+    "measured_at_ai_band": {
+      "ai_recall": 0.828,
+      "human_false_positive_rate": 0.065
+    },
+    "measured_at_human_band": {
+      "human_share_below": 0.613,
+      "ai_share_below": 0.034
+    }
+  },
+  "rows": [
+    {
+      "label": "human",
+      "name": "human_000_0.txt",
+      "score": 11,
+      "words": 457,
+      "verdict": "human-leaning",
+      "burst_cv": 0.942,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_001_0.txt",
+      "score": 7,
+      "words": 444,
+      "verdict": "human-leaning",
+      "burst_cv": 0.532,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_002_0.txt",
+      "score": 12,
+      "words": 506,
+      "verdict": "human-leaning",
+      "burst_cv": 0.508,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_003_0.txt",
+      "score": 6,
+      "words": 486,
+      "verdict": "human-leaning",
+      "burst_cv": 0.742,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_004_0.txt",
+      "score": 35,
+      "words": 336,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.267,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_005_0.txt",
+      "score": 23,
+      "words": 314,
+      "verdict": "inconclusive — mixed signals",
+      "burst_cv": 0.618,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_006_0.txt",
+      "score": 23,
+      "words": 434,
+      "verdict": "inconclusive — mixed signals",
+      "burst_cv": 0.467,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_007_0.txt",
+      "score": 22,
+      "words": 535,
+      "verdict": "inconclusive — mixed signals",
+      "burst_cv": 0.445,
+      "markers": 1.0
+    },
+    {
+      "label": "human",
+      "name": "human_008_0.txt",
+      "score": 10,
+      "words": 555,
+      "verdict": "human-leaning",
+      "burst_cv": 0.641,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_009_0.txt",
+      "score": 4,
+      "words": 387,
+      "verdict": "human-leaning",
+      "burst_cv": 0.748,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_010_0.txt",
+      "score": 13,
+      "words": 551,
+      "verdict": "human-leaning",
+      "burst_cv": 0.537,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_011_0.txt",
+      "score": 24,
+      "words": 350,
+      "verdict": "inconclusive — mixed signals",
+      "burst_cv": 0.448,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_012_0.txt",
+      "score": 19,
+      "words": 582,
+      "verdict": "human-leaning",
+      "burst_cv": 0.458,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_013_0.txt",
+      "score": 9,
+      "words": 579,
+      "verdict": "human-leaning",
+      "burst_cv": 0.464,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_014.txt",
+      "score": 11,
+      "words": 457,
+      "verdict": "human-leaning",
+      "burst_cv": 0.942,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_015.txt",
+      "score": 7,
+      "words": 444,
+      "verdict": "human-leaning",
+      "burst_cv": 0.532,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_016.txt",
+      "score": 12,
+      "words": 506,
+      "verdict": "human-leaning",
+      "burst_cv": 0.508,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_017.txt",
+      "score": 6,
+      "words": 486,
+      "verdict": "human-leaning",
+      "burst_cv": 0.742,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_018.txt",
+      "score": 35,
+      "words": 336,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.267,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_019.txt",
+      "score": 23,
+      "words": 314,
+      "verdict": "inconclusive — mixed signals",
+      "burst_cv": 0.618,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_020.txt",
+      "score": 23,
+      "words": 434,
+      "verdict": "inconclusive — mixed signals",
+      "burst_cv": 0.467,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_021.txt",
+      "score": 22,
+      "words": 535,
+      "verdict": "inconclusive — mixed signals",
+      "burst_cv": 0.445,
+      "markers": 1.0
+    },
+    {
+      "label": "human",
+      "name": "human_022.txt",
+      "score": 10,
+      "words": 555,
+      "verdict": "human-leaning",
+      "burst_cv": 0.641,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_023.txt",
+      "score": 4,
+      "words": 387,
+      "verdict": "human-leaning",
+      "burst_cv": 0.748,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_024.txt",
+      "score": 13,
+      "words": 551,
+      "verdict": "human-leaning",
+      "burst_cv": 0.537,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_025.txt",
+      "score": 24,
+      "words": 350,
+      "verdict": "inconclusive — mixed signals",
+      "burst_cv": 0.448,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_026.txt",
+      "score": 19,
+      "words": 582,
+      "verdict": "human-leaning",
+      "burst_cv": 0.458,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_027.txt",
+      "score": 9,
+      "words": 579,
+      "verdict": "human-leaning",
+      "burst_cv": 0.464,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_028.txt",
+      "score": 27,
+      "words": 309,
+      "verdict": "inconclusive — mixed signals",
+      "burst_cv": 0.524,
+      "markers": 0.0
+    },
+    {
+      "label": "human",
+      "name": "human_029.txt",
+      "score": 31,
+      "words": 442,
+      "verdict": "inconclusive — mixed signals",
+      "burst_cv": 0.484,
+      "markers": 1.0
+    },
+    {
+      "label": "human",
+      "name": "human_030.txt",
+      "score": 15,
+      "words": 353,
+      "verdict": "human-leaning",
+      "burst_cv": 0.487,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_000.txt",
+      "score": 57,
+      "words": 269,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.287,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_001.txt",
+      "score": 12,
+      "words": 183,
+      "verdict": "human-leaning",
+      "burst_cv": 0.482,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_002.txt",
+      "score": 44,
+      "words": 313,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.279,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_003.txt",
+      "score": 56,
+      "words": 407,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.253,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_004.txt",
+      "score": 47,
+      "words": 387,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.266,
+      "markers": 2.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_005.txt",
+      "score": 47,
+      "words": 343,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.223,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_006.txt",
+      "score": 56,
+      "words": 534,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.379,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_007.txt",
+      "score": 25,
+      "words": 280,
+      "verdict": "inconclusive — mixed signals",
+      "burst_cv": 0.391,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_008.txt",
+      "score": 53,
+      "words": 307,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.264,
+      "markers": 3.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_009.txt",
+      "score": 53,
+      "words": 309,
+      "verdict": "AI-leaning",
+      "burst_cv": null,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_010.txt",
+      "score": 58,
+      "words": 349,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.324,
+      "markers": 6.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_011.txt",
+      "score": 45,
+      "words": 359,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.258,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_012.txt",
+      "score": 44,
+      "words": 454,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.304,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_013.txt",
+      "score": 27,
+      "words": 318,
+      "verdict": "inconclusive — mixed signals",
+      "burst_cv": 0.414,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_014.txt",
+      "score": 45,
+      "words": 323,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.221,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_015.txt",
+      "score": 55,
+      "words": 389,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.371,
+      "markers": 1.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_016.txt",
+      "score": 25,
+      "words": 390,
+      "verdict": "inconclusive — mixed signals",
+      "burst_cv": 0.323,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_017.txt",
+      "score": 64,
+      "words": 296,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.254,
+      "markers": 2.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_018.txt",
+      "score": 39,
+      "words": 272,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.311,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_019.txt",
+      "score": 48,
+      "words": 368,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.254,
+      "markers": 1.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_020.txt",
+      "score": 36,
+      "words": 322,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.333,
+      "markers": 1.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_021.txt",
+      "score": 52,
+      "words": 334,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.424,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_022.txt",
+      "score": 50,
+      "words": 330,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.265,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_023.txt",
+      "score": 43,
+      "words": 358,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.263,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_024.txt",
+      "score": 49,
+      "words": 397,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.395,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_025.txt",
+      "score": 36,
+      "words": 451,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.525,
+      "markers": 1.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_026.txt",
+      "score": 32,
+      "words": 182,
+      "verdict": "inconclusive — mixed signals",
+      "burst_cv": 0.423,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_027.txt",
+      "score": 37,
+      "words": 346,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.322,
+      "markers": 0.0
+    },
+    {
+      "label": "ai",
+      "name": "ai_028.txt",
+      "score": 43,
+      "words": 370,
+      "verdict": "AI-leaning",
+      "burst_cv": 0.334,
+      "markers": 0.0
+    }
+  ]
+}

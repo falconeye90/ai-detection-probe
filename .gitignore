@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# calibration corpus is data, not code: local only (results.json is committed)
+calibration/corpus/
